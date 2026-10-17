@@ -123,12 +123,13 @@
 .dialogActions button:focus-visible { outline: 4px dashed var(--game-ink); outline-offset: 4px; }
 
 .mainWindow {
-  left: 8%;
+  left: 50%;
   top: 10%;
-  width: min(76vw, 980px);
+  width: min(86vw, 980px);
   height: min(74vh, 680px);
+  transform: translateX(-50%);
 }
-.mainWindow.maximized { left: 2%; top: 2%; width: 96%; height: 96%; }
+.mainWindow.maximized { left: 2%; top: 2%; width: 96%; height: 96%; transform: none; }
 
 .mainContent {
   position: relative;
@@ -146,6 +147,34 @@
   background: #111;
   pointer-events: none;
 }
+
+.poseGame { position: relative; width: 100%; height: 100%; background: #050505; }
+.referenceFeed { display: block; width: 100%; height: 100%; object-fit: contain; background: #050505; }
+.cameraFeed { display: block; width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
+.countdown { display: grid; width: 100%; height: 100%; place-content: center; justify-items: center; gap: 18px; background: #111; color: #fff; }
+.countdown span { color: #f2df83; font: 400 14px/1 'Silkscreen', monospace; }
+.countdown strong { color: #fff; font: 700 clamp(100px, 18vw, 220px)/.8 'Pixelify Sans', monospace; text-shadow: 6px 6px 0 var(--finished-shadow); animation: countdown-pop 1s steps(3, end) both; }
+.captureCanvas { display: none; }
+.poseHud { position: absolute; right: 14px; bottom: 14px; left: 14px; display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; background: rgba(17, 17, 17, .82); color: #fff; font: 400 12px/1.3 'Silkscreen', monospace; }
+.poseHud strong { color: #f2df83; font: 700 24px/1 'Pixelify Sans', monospace; }
+
+.resultsScreen { position: relative; z-index: 2; display: flex; height: 100%; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 24px; box-sizing: border-box; overflow: auto; background: #111; color: #fff; text-align: center; }
+.resultsKicker { margin: 0; color: #f2df83; font: 400 12px/1 'Silkscreen', monospace; }
+.resultsScreen h2 { margin: 0; color: #fff; font: 700 clamp(28px, 5vw, 58px)/1 'Pixelify Sans', monospace; text-shadow: 3px 3px 0 var(--finished-shadow); }
+.roundScores { display: flex; width: min(100%, 540px); justify-content: center; gap: 10px; }
+.roundScore, .finalScore { display: grid; gap: 8px; padding: 12px; border: 2px solid #7e98d1; background: #1b2a5c; }
+.roundScore { flex: 1; }
+.roundScore span, .finalScore span { font: 400 10px/1 'Silkscreen', monospace; }
+.roundScore strong { color: #f2df83; font: 700 25px/1 'Pixelify Sans', monospace; }
+.finalScore { width: min(100%, 300px); background: #2f4a9a; }
+.finalScore strong { color: #f2df83; font: 700 44px/1 'Pixelify Sans', monospace; }
+.nameField { display: grid; gap: 8px; width: min(100%, 300px); color: #f2df83; text-align: left; font: 400 11px/1 'Silkscreen', monospace; }
+.nameField input { width: 100%; padding: 10px; border: 2px solid #fff; box-sizing: border-box; background: #fff; color: #1b2a5c; font: 600 16px/1 'Pixelify Sans', monospace; }
+.resultActions { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
+.addScoreButton, .restartButton { padding: 10px 14px; border: 2px solid #fff; color: #fff; font: 400 11px/1.2 'Silkscreen', monospace; cursor: pointer; }
+.addScoreButton { background: #2f4a9a; }
+.restartButton { background: #c8283c; }
+.addScoreButton:disabled { cursor: wait; opacity: .6; }
 
 .contentScanlines,
 .contentVignette { position: absolute; inset: 0; pointer-events: none; }
@@ -251,13 +280,14 @@
 .dialogActions button:active { border-top-color: var(--bevel-dark); border-left-color: var(--bevel-dark); border-right-color: var(--bevel-light); border-bottom-color: var(--bevel-light); }
 
 @keyframes pop-in { from { opacity: 0; transform: scale(.8); } to { opacity: 1; transform: scale(1); } }
+@keyframes countdown-pop { from { opacity: 0; transform: scale(.65); } to { opacity: 1; transform: scale(1); } }
 @keyframes flicker { 0%,100% { opacity: .97; } 50% { opacity: 1; } }
 @keyframes sprite-twinkle { 0%,100% { opacity: .6; } 50% { opacity: 1; } }
 
 @media (max-width: 700px) {
   .spriteLayer { display: none; }
-  .mainWindow { left: 0; top: 0; width: 100%; height: 78vh; }
-  .mainWindow.maximized { left: 0; top: 0; width: 100%; height: 100%; }
+  .mainWindow { left: 0; top: 0; width: 100%; height: 78vh; transform: none; }
+  .mainWindow.maximized { left: 0; top: 0; width: 100%; height: 100%; transform: none; }
   .copyPopup { left: 4%; top: auto; bottom: 12px; width: 92%; height: 38vh; }
   .copyPopup { left: 4% !important; top: auto !important; }
   .windowTitlebar { flex-basis: 46px; padding: 0 14px; }
@@ -271,5 +301,6 @@
   .contentVignette,
   .spriteLayer span,
   .copyPopup,
-  .warningDialog { animation: none; }
+  .warningDialog,
+  .countdown strong { animation: none; }
 }

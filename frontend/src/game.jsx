@@ -1,4 +1,4 @@
-import { useEffect, useReducer, useRef } from 'react'
+import { useEffect, useReducer, useRef, useState } from 'react'
 import styles from './game.module.css'
 
 const SKY_WIDTH = 320
@@ -89,7 +89,7 @@ function initialState() {
 	}
 }
 
-function MainWindow({ round, totalRounds, finished, onClose, onExpand, maximized, popupOpen, onShowMove, children, closeRef, onFocus, onDragStart }) {
+function MainWindow({ round, totalRounds, finished, onClose, onExpand, maximized, children, finishedContent, closeRef, onFocus, onDragStart }) {
 	return (
 		<PixelWindow
 			title="SALTARE.EXE"
@@ -105,33 +105,13 @@ function MainWindow({ round, totalRounds, finished, onClose, onExpand, maximized
 		>
 			<div className={styles.mainContent}>
 				{!finished && children}
-				{finished && <div className={styles.finished} role="status" aria-live="polite">Finished!</div>}
+				{finished && (finishedContent || <div className={styles.finished} role="status" aria-live="polite">Finished!</div>)}
 				<div className={styles.contentScanlines} aria-hidden="true" />
 				<div className={styles.contentVignette} aria-hidden="true" />
 			</div>
 			<footer className={styles.statusBar}>
 				<span>ROUND {round} / {totalRounds}</span>
-				{!popupOpen && <button className={styles.showMove} type="button" onClick={onShowMove}>SHOW MOVE</button>}
 			</footer>
-		</PixelWindow>
-	)
-}
-
-function CopyMovePopup({ referenceName, onClose, position, onFocus, onDragStart, children }) {
-	return (
-		<PixelWindow
-			title="COPY THIS MOVE"
-			ariaLabel="Copy this move"
-			onClose={onClose}
-			onFocus={onFocus}
-			onDragStart={onDragStart}
-			className={styles.copyPopup}
-			style={{ left: position.x, top: position.y, zIndex: 4 }}
-		>
-			<div className={styles.copyBody}>
-				<div className={styles.movePreview}>{children}</div>
-				<span>{referenceName}</span>
-			</div>
 		</PixelWindow>
 	)
 }
@@ -181,30 +161,10 @@ function WarningDialog({ onYes, onNo, returnFocusRef }) {
 	)
 }
 
-export function DesktopScreen({ referenceName = 'Reference Dance', round = 1, totalRounds = 3, status = 'playing', playerName = 'Player', onBack, children }) {
+export function DesktopScreen({ round = 1, totalRounds = 3, status = 'playing', onBack, children, finishedContent }) {
 	const [state, dispatch] = useReducer(reducer, undefined, initialState)
 	const closeButtonRef = useRef(null)
-	const dragRef = useRef(null)
 	const finished = status === 'finished'
-
-	useEffect(() => {
-		const move = (event) => {
-			if (!dragRef.current) return
-			const { startX, startY, origin } = dragRef.current
-			const x = Math.max(8, Math.min(window.innerWidth - 190, origin.x + event.clientX - startX))
-			const y = Math.max(8, Math.min(window.innerHeight - 160, origin.y + event.clientY - startY))
-			dispatch({ type: 'move', position: { x, y } })
-		}
-		const stop = () => { dragRef.current = null }
-		window.addEventListener('pointermove', move)
-		window.addEventListener('pointerup', stop)
-		return () => { window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', stop) }
-	}, [])
-
-	const startDrag = (event) => {
-		if (window.innerWidth < 700 || event.target.closest('button')) return
-		dragRef.current = { startX: event.clientX, startY: event.clientY, origin: state.positions.popup }
-	}
 
 	const closeWarning = () => {
 		dispatch({ type: 'closeWarning' })
@@ -220,21 +180,178 @@ export function DesktopScreen({ referenceName = 'Reference Dance', round = 1, to
 				round={round}
 				totalRounds={totalRounds}
 				finished={finished}
-				popupOpen={state.popupOpen}
 				maximized={state.maximized}
 				onClose={() => dispatch({ type: 'openWarning' })}
 				onExpand={() => dispatch({ type: 'toggleMax' })}
-				onShowMove={() => dispatch({ type: 'togglePopup' })}
+				finishedContent={finishedContent}
 				closeRef={closeButtonRef}
 				onFocus={() => dispatch({ type: 'focus', id: 'main' })}
 			>{children}</MainWindow>
-			{state.popupOpen && !finished && <CopyMovePopup referenceName={referenceName} position={state.positions.popup} onClose={() => dispatch({ type: 'closePopup' })} onFocus={() => dispatch({ type: 'focus', id: 'popup' })} onDragStart={startDrag}>{children}</CopyMovePopup>}
 			{state.warningOpen && <WarningDialog returnFocusRef={closeButtonRef} onNo={closeWarning} onYes={onBack} />}
-			{finished && <p className={styles.scoreCaption} role="status">{playerName}, your score is on the leaderboard.</p>}
 		</main>
 	)
 }
 
 export function GameScreen(props) {
 	return <DesktopScreen {...props} />
+}
+
+export function GameResults({ roundScores = [], finalScore = 0, name, onNameChange, onAdd, onRestart, saving }) {
+	return <section className={styles.resultsScreen} aria-labelledby="results-title">
+		<p className={styles.resultsKicker}>DANCE COMPLETE</p>
+		<h2 id="results-title">YOUR SCORE</h2>
+		<div className={styles.roundScores}>
+			{[0, 1, 2].map((index) => <div key={index} className={styles.roundScore}><span>ROUND {index + 1}</span><strong>{roundScores[index] ?? 0}</strong></div>)}
+		</div>
+		<div className={styles.finalScore}><span>FINAL SCORE</span><strong>{finalScore}</strong></div>
+		<label className={styles.nameField} htmlFor="leaderboard-name">NAME
+			<input id="leaderboard-name" value={name} maxLength={20} onChange={(event) => onNameChange(event.target.value)} placeholder="ENTER NAME" />
+		</label>
+		<div className={styles.resultActions}>
+			<button type="button" className={styles.addScoreButton} disabled={saving || !name.trim()} onClick={onAdd}>{saving ? 'SAVING...' : 'ADD TO LEADERBOARD'}</button>
+			<button type="button" className={styles.restartButton} onClick={onRestart}>RESTART</button>
+		</div>
+	</section>
+}
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000'
+const REFERENCE_VIDEO = '/reference-dance.mp4'
+
+export function PoseGame({ danceId = 'test_video', onRoundChange, onFinished }) {
+	const videoRef = useRef(null)
+	const referenceRef = useRef(null)
+	const canvasRef = useRef(null)
+	const streamRef = useRef(null)
+	const sessionRef = useRef(null)
+	const cameraStartedAtRef = useRef(null)
+	const roundDurationRef = useRef(null)
+	const roundRef = useRef(1)
+	const finishingRef = useRef(false)
+	const onRoundChangeRef = useRef(onRoundChange)
+	const onFinishedRef = useRef(onFinished)
+	const sendingRef = useRef(false)
+	const frameLoopRef = useRef(null)
+	const lastSentRef = useRef(0)
+	const [score, setScore] = useState(null)
+	const [phase, setPhase] = useState('reference')
+	const [countdown, setCountdown] = useState(3)
+	const [message, setMessage] = useState('Watch the reference')
+	const phaseRef = useRef(phase)
+	useEffect(() => {
+		onRoundChangeRef.current = onRoundChange
+		onFinishedRef.current = onFinished
+	}, [onFinished, onRoundChange])
+	useEffect(() => { phaseRef.current = phase }, [phase])
+
+	useEffect(() => {
+		if (phase === 'camera' && videoRef.current && streamRef.current) videoRef.current.srcObject = streamRef.current
+	}, [phase])
+
+	useEffect(() => {
+		if (phase !== 'countdown') return undefined
+		const timeout = window.setTimeout(() => {
+			setCountdown((value) => {
+				if (value <= 1) {
+					cameraStartedAtRef.current = performance.now()
+					setPhase('camera')
+					setMessage('Your turn')
+					return 0
+				}
+				return value - 1
+			})
+		}, 1000)
+		return () => window.clearTimeout(timeout)
+	}, [phase, countdown])
+
+	useEffect(() => {
+		let active = true
+		let stream
+
+		const start = async () => {
+			try {
+				stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }, audio: false })
+				if (!active) return
+				streamRef.current = stream
+				const response = await fetch(`${API_URL}/api/sessions`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ dance_id: danceId }) })
+				if (!response.ok) throw new Error('Could not start scoring session')
+				const session = await response.json()
+				sessionRef.current = session.session_id
+				roundDurationRef.current = (session.frames / session.fps) * 1000
+				onRoundChangeRef.current?.(1)
+				const sendFrame = async (time) => {
+					if (!active) return
+					frameLoopRef.current = requestAnimationFrame(sendFrame)
+					if (phaseRef.current !== 'camera' || !cameraStartedAtRef.current) return
+					const elapsed = time - cameraStartedAtRef.current
+					if (elapsed >= roundDurationRef.current && !sendingRef.current) {
+						if (roundRef.current < 3) {
+							roundRef.current += 1
+							onRoundChangeRef.current?.(roundRef.current)
+							cameraStartedAtRef.current = null
+							setPhase('reference')
+							setMessage('Watch the reference')
+							if (referenceRef.current) {
+								referenceRef.current.currentTime = 0
+								referenceRef.current.play().catch(() => {})
+							}
+							return
+						}
+					}
+					if (elapsed >= roundDurationRef.current && roundRef.current === 3 && !finishingRef.current) {
+						finishingRef.current = true
+						const finishedSessionId = sessionRef.current
+						sessionRef.current = null
+						const finished = await fetch(`${API_URL}/api/sessions/${finishedSessionId}/finish`, { method: 'POST' })
+						const result = finished.ok ? await finished.json() : { score: 0 }
+						if (active) onFinishedRef.current?.(result.score, result.round_scores || [])
+						return
+					}
+					if (!sessionRef.current || sendingRef.current || time - lastSentRef.current < 160 || videoRef.current.readyState < 2) return
+					const video = videoRef.current
+					const canvas = canvasRef.current
+					canvas.width = video.videoWidth || 640
+					canvas.height = video.videoHeight || 480
+					canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height)
+					lastSentRef.current = time
+					sendingRef.current = true
+					canvas.toBlob(async (blob) => {
+						try {
+							const form = new FormData()
+							form.append('frame', blob, 'camera.jpg')
+							form.append('round_number', String(roundRef.current))
+							const result = await fetch(`${API_URL}/api/sessions/${sessionRef.current}/frames`, { method: 'POST', body: form })
+							if (result.ok && active) setScore((await result.json()).average_score)
+						} finally {
+							sendingRef.current = false
+						}
+					}, 'image/jpeg', 0.7)
+				}
+				frameLoopRef.current = requestAnimationFrame(sendFrame)
+			} catch (error) {
+				if (active) setMessage(error.message || 'Camera or backend unavailable')
+			}
+		}
+
+		start()
+		return () => {
+			active = false
+			if (frameLoopRef.current) cancelAnimationFrame(frameLoopRef.current)
+			streamRef.current?.getTracks().forEach((track) => track.stop())
+			if (sessionRef.current) fetch(`${API_URL}/api/sessions/${sessionRef.current}/finish`, { method: 'POST' }).catch(() => {})
+		}
+	}, [danceId])
+
+	const startCameraRound = () => {
+		setCountdown(3)
+		setPhase('countdown')
+		setMessage('Get ready')
+	}
+
+	return <div className={styles.poseGame}>
+		{phase === 'reference' && <video ref={referenceRef} className={styles.referenceFeed} src={REFERENCE_VIDEO} autoPlay muted playsInline onEnded={startCameraRound} aria-label="Reference dance video" />}
+		{phase === 'countdown' && <div className={styles.countdown} role="status" aria-live="assertive"><span>GET READY</span><strong>{countdown}</strong></div>}
+		{phase === 'camera' && <video ref={videoRef} className={styles.cameraFeed} autoPlay muted playsInline aria-label="Your camera feed" />}
+		<canvas ref={canvasRef} className={styles.captureCanvas} aria-hidden="true" />
+		<div className={styles.poseHud}><span>{message}</span><strong>{score === null ? '--' : `${score}%`}</strong></div>
+	</div>
 }

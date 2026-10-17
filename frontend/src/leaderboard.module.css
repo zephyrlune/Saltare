@@ -100,7 +100,6 @@
 .table thead th { padding: 0 14px; }
 .table thead th:first-child { width: 82px; }
 .table thead th:nth-child(3) { width: 180px; }
-.table thead th:last-child { width: 150px; }
 .tableRow { height: 48px; border-bottom: 2px solid #a3bbea; background: #fff; animation: row-reveal 200ms steps(3, end) both; animation-delay: var(--row-delay); }
 .tableRow:nth-child(even) { background: var(--row-alt); }
 .tableRow th,
@@ -115,8 +114,6 @@
 .scoreCell { display: flex; align-items: center; justify-content: flex-end; gap: 10px; font: 400 14px/1 'Press Start 2P', monospace; }
 .scoreTrack { width: 88px; height: 8px; display: inline-block; background: #dfe6fb; clip-path: polygon(3px 0, calc(100% - 3px) 0, 100% 3px, 100% calc(100% - 3px), calc(100% - 3px) 100%, 3px 100%, 0 calc(100% - 3px), 0 3px); }
 .scoreFill { display: block; height: 100%; background: #a3bbea; }
-.dateCell { color: #5c6fa8 !important; }
-
 .statusBar {
   flex: 0 0 34px;
   display: flex;
@@ -169,8 +166,6 @@
   .tabs { flex-basis: 54px; padding-left: 8px; }
   .tab { min-height: 44px; padding: 8px 14px; }
   .table { min-width: 0; }
-  .table thead th:nth-child(4),
-  .tableRow td:nth-child(4) { display: none; }
   .table thead th:first-child { width: 64px; }
   .table thead th:nth-child(3) { width: 100px; }
   .tableRow { height: 66px; }

@@ -1,6 +1,8 @@
 :root {
   --cream: #fff8d9;
   --periwinkle: #a3bbea;
+
+.reference-placeholder { display: grid; width: 100%; height: 100%; place-items: center; background: #111; color: #f2df83; font: 700 18px/1.5 'Silkscreen', monospace; text-align: center; }
   --ink-blue: #2f4a9a;
   --btn-blue: #4f78b8;
   --btn-text-alt: #3f6aa8;

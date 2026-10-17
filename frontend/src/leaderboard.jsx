@@ -1,39 +1,32 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { PixelSky, PixelWindow } from './game.jsx'
+import { getTopScores } from './scores.js'
 import styles from './leaderboard.module.css'
 
-export const DANCES = [
-	{ id: 'reference-dance', label: 'Reference Dance' },
-	{ id: 'moon-step', label: 'Moon Step' },
-	{ id: 'sunny-hop', label: 'Sunny Hop' },
-]
 
-const NAMES = ['Mina', 'Rafi', 'Jo', 'Tara', 'Niko', 'Ari', 'Lena', 'Bimo', 'Sora', 'Kian', 'Vee', 'Dara', 'Omar', 'Ira', 'Noel', 'Zia', 'Pip', 'Rio', 'Aya', 'Ken']
-
-const MOCK_ENTRIES = DANCES.flatMap((dance, danceIndex) => NAMES.map((name, index) => ({
-	id: `${dance.id}-${index + 1}`,
-	name,
-	score: Math.max(42, 98 - index * 2 - danceIndex * 3),
-	date: `2026-0${danceIndex + 4}-${String(20 - (index % 18)).padStart(2, '0')}`,
-	danceId: dance.id,
-})))
-
-export function useLeaderboard(danceId) {
-	const queryState = new URLSearchParams(window.location.search).get('leaderboard')
-	const requestedStatus = ['loading', 'empty', 'error'].includes(queryState) ? queryState : 'ready'
-	const [status, setStatus] = useState(requestedStatus)
+function useLeaderboard() {
+	const [status, setStatus] = useState('loading')
+	const [entries, setEntries] = useState([])
 	const [reloadKey, setReloadKey] = useState(0)
 
 	useEffect(() => {
-		setStatus(requestedStatus)
-	}, [danceId, reloadKey, requestedStatus])
+		let active = true
+		setStatus('loading')
 
-	const entries = useMemo(() => {
-		if (status === 'empty' || status === 'error' || status === 'loading') return []
-		return MOCK_ENTRIES.filter((entry) => entry.danceId === danceId).sort((a, b) => b.score - a.score)
-	}, [danceId, status])
+		getTopScores()
+			.then((scores) => {
+				if (!active) return
+				setEntries(scores)
+				setStatus(scores.length ? 'ready' : 'empty')
+			})
+			.catch(() => {
+				if (active) setStatus('error')
+			})
 
-	return { entries, status, reload: () => { setStatus('ready'); setReloadKey((value) => value + 1) } }
+		return () => { active = false }
+	}, [reloadKey])
+
+	return { entries, status, reload: () => setReloadKey((value) => value + 1) }
 }
 
 function RankBadge({ rank }) {
@@ -54,50 +47,17 @@ function RankBadge({ rank }) {
 	)
 }
 
-function DanceTabs({ activeDance, onChange }) {
-	const handleKeyDown = (event, index) => {
-		if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return
-		event.preventDefault()
-		const next = event.key === 'Home' ? 0 : event.key === 'End' ? DANCES.length - 1 : (index + (event.key === 'ArrowLeft' ? -1 : 1) + DANCES.length) % DANCES.length
-		onChange(DANCES[next].id)
-		document.getElementById(`dance-tab-${DANCES[next].id}`)?.focus()
-	}
-
-	return (
-		<div className={styles.tabs} role="tablist" aria-label="Choose a dance">
-			{DANCES.map((dance, index) => (
-				<button
-					key={dance.id}
-					id={`dance-tab-${dance.id}`}
-					className={`${styles.tab} ${dance.id === activeDance ? styles.activeTab : ''}`}
-					type="button"
-					role="tab"
-					aria-selected={dance.id === activeDance}
-					aria-controls="leaderboard-panel"
-					tabIndex={dance.id === activeDance ? 0 : -1}
-					onClick={() => onChange(dance.id)}
-					onKeyDown={(event) => handleKeyDown(event, index)}
-				>{dance.label}</button>
-			))}
-		</div>
-	)
-}
-
-function formatDate(date) {
-	return new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(date)).toUpperCase()
-}
-
-function LeaderboardTable({ entries, playerName, activeDance }) {
+function LeaderboardTable({ entries, playerName }) {
 	const visibleEntries = [...entries]
 	const playerIndex = visibleEntries.findIndex((entry) => entry.name.toLowerCase() === playerName?.toLowerCase())
 	if (playerName && playerIndex < 0) {
-		visibleEntries.push({ id: 'player-pinned', name: playerName, score: 0, date: new Date().toISOString(), pinned: true })
+		visibleEntries.push({ id: 'player-pinned', name: playerName, score: 0, pinned: true })
 	}
 
 	return (
-		<div className={styles.tableScroll} role="tabpanel" id="leaderboard-panel" aria-labelledby={`dance-tab-${activeDance}`} tabIndex="0">
+		<div className={styles.tableScroll} role="region" aria-label="Overall leaderboard" tabIndex="0">
 			<table className={styles.table}>
-				<thead><tr><th scope="col">Rank</th><th scope="col">Player</th><th scope="col">Score</th><th scope="col">Date</th></tr></thead>
+				<thead><tr><th scope="col">Rank</th><th scope="col">Player</th><th scope="col">Score</th></tr></thead>
 				<tbody>
 					{visibleEntries.map((entry, index) => {
 						const isPlayer = entry.name.toLowerCase() === playerName?.toLowerCase()
@@ -106,7 +66,6 @@ function LeaderboardTable({ entries, playerName, activeDance }) {
 								<td>{index < 3 && !entry.pinned ? <><RankBadge rank={index + 1} /><span className={styles.visuallyHidden}>{index + 1}</span></> : <span className={styles.rankNumber}>{entry.pinned ? '-' : index + 1}</span>}</td>
 								<th scope="row">{entry.name}{isPlayer && <><span className={styles.youTag}>YOU</span><span className={styles.visuallyHidden}>Your score</span></>}</th>
 								<td><span className={styles.scoreCell}>{entry.score}<span className={styles.scoreTrack}><span className={styles.scoreFill} style={{ width: `${entry.score}%` }} /></span></span></td>
-								<td className={styles.dateCell}>{formatDate(entry.date)}</td>
 							</tr>
 						)
 					})}
@@ -131,10 +90,8 @@ function StatusBar({ status, count, label }) {
 }
 
 export function LeaderboardScreen({ playerName = '', onBack }) {
-	const [activeDance, setActiveDance] = useState(DANCES[0].id)
 	const [maximized, setMaximized] = useState(false)
-	const { entries, status, reload } = useLeaderboard(activeDance)
-	const activeLabel = DANCES.find((dance) => dance.id === activeDance)?.label
+	const { entries, status, reload } = useLeaderboard()
 
 	return (
 		<main className={styles.desktopScreen}>
@@ -150,12 +107,11 @@ export function LeaderboardScreen({ playerName = '', onBack }) {
 					className={`${styles.leaderboardWindow} ${maximized ? styles.maximized : ''}`}
 				>
 					<div className={styles.leaderboardBody}>
-						<DanceTabs activeDance={activeDance} onChange={setActiveDance} />
 						{status === 'loading' && <div className={styles.loadingRows}>{Array.from({ length: 6 }, (_, index) => <div key={index} className={styles.skeletonRow} />)}</div>}
 						{status === 'empty' && <EmptyState />}
 						{status === 'error' && <div className={styles.errorState}><strong>COULD NOT LOAD SCORES</strong><button type="button" className={styles.winButton} onClick={reload}>Retry</button></div>}
-						{status === 'ready' && <LeaderboardTable entries={entries} playerName={playerName} activeDance={activeDance} />}
-						<StatusBar status={status} count={entries.length} label={activeLabel} />
+						{status === 'ready' && <LeaderboardTable entries={entries} playerName={playerName} />}
+						<StatusBar status={status} count={entries.length} label="OVERALL SCORES" />
 					</div>
 				</PixelWindow>
 			</div>

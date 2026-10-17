@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import './App.css'
-import { GameScreen } from './game.jsx'
+import { GameResults, GameScreen, PoseGame } from './game.jsx'
 import { LeaderboardScreen } from './leaderboard.jsx'
+import { saveScore } from './scores.js'
 
 const SKY_WIDTH = 320
 const SKY_HEIGHT = 213
@@ -162,9 +163,19 @@ function PlaceholderScreen({ title, onBack }) {
 function App() {
   const [screen, setScreen] = useState('title')
   const [isZooming, setIsZooming] = useState(false)
-  const forcedStatus = new URLSearchParams(window.location.search).get('status') === 'finished' ? 'finished' : 'playing'
+  const [gameStatus, setGameStatus] = useState('playing')
+  const [round, setRound] = useState(1)
+  const [roundScores, setRoundScores] = useState([])
+  const [finalScore, setFinalScore] = useState(0)
+  const [playerName, setPlayerName] = useState('Mina')
+  const [savingScore, setSavingScore] = useState(false)
+  const [gameKey, setGameKey] = useState(0)
 
   const startGame = () => {
+    setGameStatus('playing')
+    setRound(1)
+    setRoundScores([])
+    setFinalScore(0)
     setIsZooming(true)
     window.setTimeout(() => {
       setScreen('game')
@@ -172,12 +183,36 @@ function App() {
     }, 360)
   }
 
+  const restartGame = () => {
+    setGameStatus('playing')
+    setRound(1)
+    setRoundScores([])
+    setFinalScore(0)
+    setGameKey((value) => value + 1)
+  }
+
   if (screen === 'game') {
-    return <GameScreen status={forcedStatus} onBack={() => setScreen('title')} />
+    const finishGame = (score, scoresByRound) => {
+      setFinalScore(score)
+      setRoundScores(scoresByRound)
+      setGameStatus('finished')
+    }
+
+    const addToLeaderboard = async () => {
+      setSavingScore(true)
+      try {
+        await saveScore(playerName, finalScore)
+        setScreen('leaderboard')
+      } finally {
+        setSavingScore(false)
+      }
+    }
+
+    return <GameScreen round={round} status={gameStatus} onBack={() => setScreen('title')} finishedContent={<GameResults roundScores={roundScores} finalScore={finalScore} name={playerName} onNameChange={setPlayerName} onAdd={addToLeaderboard} onRestart={restartGame} saving={savingScore} />}><PoseGame key={gameKey} onRoundChange={setRound} onFinished={finishGame} /></GameScreen>
   }
 
   if (screen === 'leaderboard') {
-    return <LeaderboardScreen playerName="Mina" onBack={() => setScreen('title')} />
+    return <LeaderboardScreen playerName={playerName} onBack={() => setScreen('title')} />
   }
 
   return (
