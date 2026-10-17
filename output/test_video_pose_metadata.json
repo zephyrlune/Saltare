@@ -1,0 +1,96 @@
+{
+  "source_video": "test_video.mp4",
+  "num_frames": 437,
+  "fps": 30.0,
+  "frame_width": -1,
+  "frame_height": -1,
+  "num_joints": 15,
+  "joint_names": [
+    "nose",
+    "left_shoulder",
+    "right_shoulder",
+    "left_elbow",
+    "right_elbow",
+    "left_wrist",
+    "right_wrist",
+    "left_hip",
+    "right_hip",
+    "left_knee",
+    "right_knee",
+    "left_ankle",
+    "right_ankle",
+    "left_foot",
+    "right_foot"
+  ],
+  "connections": [
+    [
+      "nose",
+      "left_shoulder"
+    ],
+    [
+      "nose",
+      "right_shoulder"
+    ],
+    [
+      "left_shoulder",
+      "right_shoulder"
+    ],
+    [
+      "left_shoulder",
+      "left_elbow"
+    ],
+    [
+      "left_elbow",
+      "left_wrist"
+    ],
+    [
+      "right_shoulder",
+      "right_elbow"
+    ],
+    [
+      "right_elbow",
+      "right_wrist"
+    ],
+    [
+      "left_shoulder",
+      "left_hip"
+    ],
+    [
+      "right_shoulder",
+      "right_hip"
+    ],
+    [
+      "left_hip",
+      "right_hip"
+    ],
+    [
+      "left_hip",
+      "left_knee"
+    ],
+    [
+      "left_knee",
+      "left_ankle"
+    ],
+    [
+      "left_ankle",
+      "left_foot"
+    ],
+    [
+      "right_hip",
+      "right_knee"
+    ],
+    [
+      "right_knee",
+      "right_ankle"
+    ],
+    [
+      "right_ankle",
+      "right_foot"
+    ]
+  ],
+  "coordinate_formats": {
+    "keypoints_normalized": "[x, y, visibility]; x/y normalized to 0-1",
+    "keypoints_px": "[x, y, visibility]; x/y measured in pixels"
+  },
+  "missing_joint_convention": "NaN values"
+}
